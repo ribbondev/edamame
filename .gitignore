@@ -1,0 +1,10 @@
+nimcache/
+nimblecache/
+htmldocs/
+*.exe
+*.dll
+*.o
+edamame
+!edamame/
+build/
+builddir/

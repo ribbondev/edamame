@@ -1,0 +1,7 @@
+
+cc := "x86_64-w64-mingw32-cc"
+cflags := "-std=c18 -O3 -s -DNDEBUG"
+
+build-w64:
+  {{cc}} {{cflags}} hello-world.c -o hello-world.exe
+
