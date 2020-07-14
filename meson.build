@@ -13,10 +13,13 @@ m = cc.find_library('m', required: false)
 # sources
 
 exe_entry_point = ['src/edamame.d']
+exe_sources = ['src/pe.d']
+source_directories = ['src']
 
 ##############
 # executables
 
 executable('edamame',
-  sources: exe_entry_point,
+  sources: exe_entry_point + exe_sources,
+  include_directories: source_directories,
   dependencies: [libpe, m])

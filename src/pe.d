@@ -1,6 +1,7 @@
 module pe;
 
 import core.stdc.stdint;
+import core.stdc.stdio;
 import std.bitmanip;
 
 alias off_t = long;
@@ -36,10 +37,10 @@ extern (C) {
     uint16_t e_cs;
     uint16_t e_lfarlc;
     uint16_t e_ovno;
-    uint16_t e_res[4];
+    uint16_t[4] e_res;
     uint16_t e_oemid;
     uint16_t e_oeminfo;
-    uint16_t e_res2[10];
+    uint16_t[10] e_res2;
     uint32_t e_lfanew;
   }
 
@@ -125,11 +126,11 @@ extern (C) {
 
   struct IMAGE_SECTION_HEADER {
     align (1):
-    uint8_t Name[8];
-    union {
+    uint8_t[8] Name;
+    union Misc {
       uint32_t PhysicalAddress;
       uint32_t VirtualSize;
-    } Misc;
+    };
     uint32_t VirtualAddress;
     uint32_t SizeOfRawData;
     uint32_t PointerToRawData;
@@ -249,28 +250,31 @@ extern (C) {
 
   struct IMAGE_RESOURCE_DIRECTORY_ENTRY {
     align (1):
-    union {
-      struct {
+    union u0 {
+      struct data {
         mixin(bitfields!(
           uint32_t, "NameOffset", 31,
-          uint32_t, "NameIsString", 1))
-      } data;
+          uint32_t, "NameIsString", 1));
+      };
       uint32_t Name;
       uint16_t Id;
-    } u0;
-    union {
+    };
+    union u1 {
       uint32_t OffsetToData;
-      struct {
-        uint32_t OffsetToDirectory:31;
-        uint32_t DataIsDirectory:1;
-      } data;
-    } u1;
+      struct data {
+        mixin(bitfields!(
+          uint32_t, "OffsetToDirectory", 31,
+          uint32_t, "DataIsDirectory", 1));
+      };
+    };
   }
+
+  alias wchar_t = dchar;
 
   struct IMAGE_RESOURCE_DATA_STRING_U {
     align (1):
     uint16_t Length;
-    wchar_t String[1];
+    wchar_t[1] String;
   }
 
   struct IMAGE_RESOURCE_DATA_ENTRY {
@@ -293,13 +297,13 @@ extern (C) {
     uint32_t dirLevel;
     pe_resource_node_type_e type;
     char *name;
-    union {
+    union raw {
       void *raw_ptr;
       IMAGE_RESOURCE_DIRECTORY *resourceDirectory;
       IMAGE_RESOURCE_DIRECTORY_ENTRY *directoryEntry;
       IMAGE_RESOURCE_DATA_STRING_U *dataString;
       IMAGE_RESOURCE_DATA_ENTRY *dataEntry;
-    } raw;
+    };
     pe_resource_node_t *parentNode;
     pe_resource_node_t *childNode;
     pe_resource_node_t *nextNode;
