@@ -1,6 +1,7 @@
 module pe;
 
 import core.stdc.stdint;
+import std.bitmanip;
 
 alias off_t = long;
 
@@ -9,12 +10,12 @@ extern (C) {
   struct IMAGE_COFF_HEADER {
     align(1):
     uint16_t Machine;
-	  uint16_t NumberOfSections;
-	  uint32_t TimeDateStamp;
-	  uint32_t PointerToSymbolTable;
-	  uint32_t NumberOfSymbols;
-	  uint16_t SizeOfOptionalHeader;
-	  uint16_t Characteristics;
+    uint16_t NumberOfSections;
+    uint32_t TimeDateStamp;
+    uint32_t PointerToSymbolTable;
+    uint32_t NumberOfSymbols;
+    uint16_t SizeOfOptionalHeader;
+    uint16_t Characteristics;
   }
 
   alias IMAGE_FILE_HEADER = IMAGE_COFF_HEADER;
@@ -111,10 +112,10 @@ extern (C) {
 
   struct IMAGE_OPTIONAL_HEADER {
     align (1):
-	  uint16_t type; // opt_type_e
-	  size_t length;
-	  IMAGE_OPTIONAL_HEADER_32 *_32;
-	  IMAGE_OPTIONAL_HEADER_64 *_64;
+    uint16_t type; // opt_type_e
+    size_t length;
+    IMAGE_OPTIONAL_HEADER_32 *_32;
+    IMAGE_OPTIONAL_HEADER_64 *_64;
   }
 
   struct IMAGE_DATA_DIRECTORY {
@@ -155,10 +156,159 @@ extern (C) {
     uint64_t imagebase;
   }
 
+  enum pe_err_e {
+    LIBPE_E_OK = 0,
+    LIBPE_E_ALLOCATION_FAILURE = -23,
+    LIBPE_E_OPEN_FAILED,
+    LIBPE_E_FDOPEN_FAILED,
+    LIBPE_E_FSTAT_FAILED,
+    LIBPE_E_NOT_A_FILE,
+    LIBPE_E_NOT_A_PE_FILE,
+    LIBPE_E_INVALID_LFANEW,
+    LIBPE_E_MISSING_COFF_HEADER,
+    LIBPE_E_MISSING_OPTIONAL_HEADER,
+    LIBPE_E_INVALID_SIGNATURE,
+    LIBPE_E_UNSUPPORTED_IMAGE,
+    LIBPE_E_MMAP_FAILED,
+    LIBPE_E_MUNMAP_FAILED,
+    LIBPE_E_CLOSE_FAILED,
+    LIBPE_E_TOO_MANY_DIRECTORIES,
+    LIBPE_E_TOO_MANY_SECTIONS,
+    LIBPE_E_INVALID_THUNK,
+    LIBPE_E_EXPORTS_CANT_READ_RVA,
+    LIBPE_E_EXPORTS_CANT_READ_DIR,
+    LIBPE_E_EXPORTS_FUNC_NEQ_NAMES,
+    LIBPE_E_HASHING_FAILED,
+    LIBPE_E_NO_CALLBACKS_FOUND,
+    LIBPE_E_NO_FUNCTIONS_FOUND
+  }
+
+  struct pe_imported_function_t {
+    char *name;
+    uint16_t hint;
+    uint16_t ordinal;
+  }
+
+  struct pe_imported_dll_t {
+    pe_err_e err;
+    char *name;
+    uint32_t functions_count;
+    pe_imported_function_t *functions;
+  }
+
   struct pe_imports_t {
     pe_err_e err;
     uint32_t dll_count;
     pe_imported_dll_t *dlls;
+  }
+
+  struct pe_exported_function_t {
+    uint32_t ordinal;
+    char *name;
+    char *fwd_name;
+    uint32_t address;
+  }
+
+  struct pe_exports_t {
+    pe_err_e err;
+    char *name;
+    uint32_t functions_count;
+    pe_exported_function_t *functions;
+  }
+
+  struct pe_hash_t {
+    char *name;
+    char *md5;
+    char *ssdeep;
+    char *sha1;
+    char *sha256;
+  }
+
+  struct pe_hash_headers_t {
+    pe_err_e err;
+    pe_hash_t *dos;
+    pe_hash_t *coff;
+    pe_hash_t *optional;
+  }
+
+  struct pe_hash_sections_t {
+    pe_err_e err;
+    uint32_t count;
+    pe_hash_t **sections;
+  }
+
+  struct IMAGE_RESOURCE_DIRECTORY {
+    align (1):
+    uint32_t Characteristics;
+    uint32_t TimeDateStamp;
+    uint16_t MajorVersion;
+    uint16_t MinorVersion;
+    uint16_t NumberOfNamedEntries;
+    uint16_t NumberOfIdEntries;
+  }
+
+  struct IMAGE_RESOURCE_DIRECTORY_ENTRY {
+    align (1):
+    union {
+      struct {
+        mixin(bitfields!(
+          uint32_t, "NameOffset", 31,
+          uint32_t, "NameIsString", 1))
+      } data;
+      uint32_t Name;
+      uint16_t Id;
+    } u0;
+    union {
+      uint32_t OffsetToData;
+      struct {
+        uint32_t OffsetToDirectory:31;
+        uint32_t DataIsDirectory:1;
+      } data;
+    } u1;
+  }
+
+  struct IMAGE_RESOURCE_DATA_STRING_U {
+    align (1):
+    uint16_t Length;
+    wchar_t String[1];
+  }
+
+  struct IMAGE_RESOURCE_DATA_ENTRY {
+    align (1):
+    uint32_t OffsetToData;
+    uint32_t Size;
+    uint32_t CodePage;
+    uint32_t Reserved;
+  }
+
+  enum pe_resource_node_type_e {
+    LIBPE_RDT_RESOURCE_DIRECTORY = 1,
+    LIBPE_RDT_DIRECTORY_ENTRY = 2,
+    LIBPE_RDT_DATA_STRING = 3,
+    LIBPE_RDT_DATA_ENTRY = 4
+  }
+
+  struct pe_resource_node_t {
+    uint16_t depth;
+    uint32_t dirLevel;
+    pe_resource_node_type_e type;
+    char *name;
+    union {
+      void *raw_ptr;
+      IMAGE_RESOURCE_DIRECTORY *resourceDirectory;
+      IMAGE_RESOURCE_DIRECTORY_ENTRY *directoryEntry;
+      IMAGE_RESOURCE_DATA_STRING_U *dataString;
+      IMAGE_RESOURCE_DATA_ENTRY *dataEntry;
+    } raw;
+    pe_resource_node_t *parentNode;
+    pe_resource_node_t *childNode;
+    pe_resource_node_t *nextNode;
+  }
+
+  struct pe_resources_t {
+    pe_err_e err;
+    void *resource_base_ptr;
+    pe_resource_node_t *root_node;
   }
 
   struct pe_cached_data_t {
