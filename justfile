@@ -10,8 +10,8 @@ build:
 
 run:
   cd builddir && ninja
-  ./builddir/xdi
+  ./builddir/edamame
 
 test:
   cd builddir && ninja
-  ./builddir/xdi_tests
+  ./builddir/edamame_tests

@@ -334,4 +334,7 @@ extern (C) {
     pe_cached_data_t cached_data;
   }
 
+  pe_err_e pe_load_file(pe_ctx_t *ctx, const char *path);
+  pe_err_e pe_parse(pe_ctx_t *ctx);
+  bool pe_is_pe(const pe_ctx_t *ctx);
 }
