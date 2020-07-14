@@ -1,8 +1,9 @@
 ## edamame
-Experimental reversing toolset for translating PE > ELF binaries `D2` `libpe`
+Experimental reversing tool for dumping PE files `D2` `libpe` `linux`
 
 ## build reqs
-- D2 compiler (dmd or ldc: https://dlang.org/)
+- standard C compiler 
+- D2 compiler (https://dlang.org/)
 - meson: https://mesonbuild.com/
 - ninja: https://ninja-build.org/
 
